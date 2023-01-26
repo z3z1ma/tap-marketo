@@ -5,12 +5,13 @@ import urllib.parse
 import freezegun
 import pendulum
 import requests_mock
-
-from tap_marketo.client import Client, ApiException
-from tap_marketo.discover import (discover_catalog,
-                                  ACTIVITY_TYPES_AUTOMATIC_INCLUSION,
-                                  ACTIVITY_TYPES_UNSUPPORTED,
-                                  PROGRAMS_AUTOMATIC_INCLUSION)
+from tap_marketo.client import ApiException, Client
+from tap_marketo.discover import (
+    ACTIVITY_TYPES_AUTOMATIC_INCLUSION,
+    ACTIVITY_TYPES_UNSUPPORTED,
+    PROGRAMS_AUTOMATIC_INCLUSION,
+    discover_catalog,
+)
 from tap_marketo.sync import *
 
 
@@ -21,10 +22,13 @@ def parse_params(request):
 class MockResponse:
     def __init__(self, data):
         self.data = data
+
     def iter_content(self, decode_unicode=True, chunk_size=512):
         yield self.data
+
     def iter_lines(self, decode_unicode=True, chunk_size=512):
         yield self.data
+
 
 # class TestSyncActivityTypes(unittest.TestCase):
 #     def setUp(self):

@@ -6,7 +6,6 @@ import pendulum
 import requests
 import singer
 
-
 # By default, jobs will run for 3 hours and be polled every 5 minutes.
 JOB_TIMEOUT = 60 * 180
 POLL_INTERVAL = 60 * 5
@@ -43,6 +42,7 @@ def extract_domain(url):
         raise ValueError("%s is not a valid Marketo URL" % url)
     return result.group()
 
+
 class ApiException(Exception):
     """Indicates an error occured communicating with the Marketo API."""
 
@@ -50,41 +50,54 @@ class ApiException(Exception):
 class ApiQuotaExceeded(Exception):
     """Indicates that there's no quota left for the API"""
 
+
 class ShortTermQuotaExceeded(Exception):
     """
     Indicates that more than 100 requests across all the user's apps have
     been made in the past 20 seconds and that we need to back off.
     """
 
+
 class ExportFailed(Exception):
 
     """Indicates an error occured while attempting a bulk export."""
 
+
 def handle_short_term_rate_limit():
-    return backoff.on_exception(backoff.constant,
-                                (ShortTermQuotaExceeded),
-                                max_tries=5,
-                                interval=4,
-                                jitter=None,
-                                logger=singer.get_logger())
+    return backoff.on_exception(
+        backoff.constant,
+        (ShortTermQuotaExceeded),
+        max_tries=5,
+        interval=4,
+        jitter=None,
+        logger=singer.get_logger(),
+    )
+
 
 def raise_for_rate_limit(data):
     err_codes = set(err["code"] for err in data.get("errors", []))
     if API_QUOTA_EXCEEDED in err_codes:
-        raise ApiQuotaExceeded(API_QUOTA_EXCEEDED_MESSAGE.format(data['errors']))
+        raise ApiQuotaExceeded(API_QUOTA_EXCEEDED_MESSAGE.format(data["errors"]))
     elif SHORT_TERM_QUOTA_EXCEEDED in err_codes:
-        message = SHORT_TERM_QUOTA_EXCEEDED_MESSAGE.format(data['errors'])
+        message = SHORT_TERM_QUOTA_EXCEEDED_MESSAGE.format(data["errors"])
         singer.log_warning(message)
         raise ShortTermQuotaExceeded(message)
 
+
 class Client:
     # pylint: disable=unused-argument
-    def __init__(self, endpoint, client_id, client_secret,
-                 max_daily_calls=MAX_DAILY_CALLS,
-                 user_agent=DEFAULT_USER_AGENT,
-                 job_timeout=JOB_TIMEOUT,
-                 poll_interval=POLL_INTERVAL,
-                 request_timeout=REQUEST_TIMEOUT, **kwargs):
+    def __init__(
+        self,
+        endpoint,
+        client_id,
+        client_secret,
+        max_daily_calls=MAX_DAILY_CALLS,
+        user_agent=DEFAULT_USER_AGENT,
+        job_timeout=JOB_TIMEOUT,
+        poll_interval=POLL_INTERVAL,
+        request_timeout=REQUEST_TIMEOUT,
+        **kwargs
+    ):
 
         self.domain = extract_domain(endpoint)
         self.client_id = client_id
@@ -97,7 +110,7 @@ class Client:
         # if request_timeout is other than 0,"0" or "" then use request_timeout
         if request_timeout and float(request_timeout):
             self.request_timeout = float(request_timeout)
-        else: # If value is 0,"0" or "" then set default to 300 seconds.
+        else:  # If value is 0,"0" or "" then set default to 300 seconds.
             self.request_timeout = REQUEST_TIMEOUT
 
         self.token_expires = None
@@ -136,7 +149,9 @@ class Client:
 
     # backoff for Timeout error is already included in "requests.exceptions.RequestException"
     # as it is a parent class of "Timeout" error
-    @singer.utils.backoff((requests.exceptions.RequestException), singer.utils.exception_is_4xx)
+    @singer.utils.backoff(
+        (requests.exceptions.RequestException), singer.utils.exception_is_4xx
+    )
     def refresh_token(self):
         # http://developers.marketo.com/rest-api/authentication/#creating_an_access_token
         params = {
@@ -151,10 +166,14 @@ class Client:
             resp = requests.get(url, params=params, timeout=self.request_timeout)
             resp_time = pendulum.utcnow()
         except requests.exceptions.ConnectionError as e:
-            raise ApiException("Connection error while refreshing token at {}.".format(url)) from e
+            raise ApiException(
+                "Connection error while refreshing token at {}.".format(url)
+            ) from e
 
         if resp.status_code != 200:
-            raise ApiException("Error refreshing token [{}]: {}".format(resp.status_code, resp.content))
+            raise ApiException(
+                "Error refreshing token [{}]: {}".format(resp.status_code, resp.content)
+            )
 
         data = resp.json()
         if "error" in data:
@@ -173,7 +192,9 @@ class Client:
     # backoff for Timeout error is already included in "requests.exceptions.RequestException"
     # as it is the parent class of "Timeout" error
     @singer.utils.ratelimit(RATE_LIMIT_CALLS, RATE_LIMIT_SECONDS)
-    @singer.utils.backoff((requests.exceptions.RequestException), singer.utils.exception_is_4xx)
+    @singer.utils.backoff(
+        (requests.exceptions.RequestException), singer.utils.exception_is_4xx
+    )
     def _request(self, method, url, endpoint_name=None, stream=False, **kwargs):
         endpoint_name = endpoint_name or url
         url = self.get_url(url)
@@ -196,7 +217,9 @@ class Client:
             raise ApiException(data)
 
         self.calls_today = int(data["result"][0]["total"])
-        singer.log_info("Used %s of %s requests", self.calls_today, self.max_daily_calls)
+        singer.log_info(
+            "Used %s of %s requests", self.calls_today, self.max_daily_calls
+        )
 
     @handle_short_term_rate_limit()
     def request(self, method, url, endpoint_name=None, **kwargs):
@@ -205,11 +228,13 @@ class Client:
 
         self.calls_today += 1
         if self.calls_today > self.max_daily_calls:
-            raise ApiException("Exceeded daily quota of {} calls".format(self.max_daily_calls))
+            raise ApiException(
+                "Exceeded daily quota of {} calls".format(self.max_daily_calls)
+            )
 
         resp = self._request(method, url, endpoint_name, **kwargs)
         if "stream" not in kwargs:
-            if resp.content == b'':
+            if resp.content == b"":
                 return {}
 
             data = resp.json()
@@ -218,26 +243,25 @@ class Client:
                 err = ", ".join("{code}: {message}".format(**e) for e in data["errors"])
                 raise ApiException("Marketo API returned error(s): {}".format(err))
 
-
             return data
         else:
             # NB: 206 Partial Content returned when checking for file existence
             if resp.status_code not in [200, 206]:
-                raise ApiException("Marketo API returned error: {0.status_code}: {0.content}".format(resp))
+                raise ApiException(
+                    "Marketo API returned error: {0.status_code}: {0.content}".format(
+                        resp
+                    )
+                )
 
             return resp
 
     def create_export(self, stream_type, fields, query):
         # http://developers.marketo.com/rest-api/bulk-extract/#creating_a_job
-        payload = {
-            "format": "CSV",
-            "fields": fields,
-            "filter": query
-        }
+        payload = {"format": "CSV", "fields": fields, "filter": query}
 
         endpoint = self.get_bulk_endpoint(stream_type, "create")
         endpoint_name = "{}_create".format(stream_type)
-        singer.log_info('Scheduling export job with query %s', query)
+        singer.log_info("Scheduling export job with query %s", query)
         data = self.request("POST", endpoint, endpoint_name=endpoint_name, json=payload)
         return data["result"][0]["exportId"]
 
@@ -256,8 +280,10 @@ class Client:
     def get_existing_exports(self, stream_type):
         endpoint = "bulk/v1/{}/export.json".format(stream_type)
         result = self.request(
-            "GET", endpoint,
-            params={"status": ["Created", "Queued", "Processing", "Completed"]})
+            "GET",
+            endpoint,
+            params={"status": ["Created", "Queued", "Processing", "Completed"]},
+        )
         if "result" in result:
             return {r["exportId"]: r for r in result["result"]}
         else:
@@ -273,7 +299,13 @@ class Client:
         endpoint_name = "{}_stream".format(stream_type)
         try:
             # Range described here: https://developers.marketo.com/rest-api/bulk-extract/#crayon-5e600bb5f1a53663868461
-            self.request("GET", endpoint, endpoint_name=endpoint_name, stream=True, headers={"Range": "bytes=0-0"})
+            self.request(
+                "GET",
+                endpoint,
+                endpoint_name=endpoint_name,
+                stream=True,
+                headers={"Range": "bytes=0-0"},
+            )
             return True
         except requests.exceptions.HTTPError as ex:
             if ex.response.status_code == 404:
@@ -284,7 +316,9 @@ class Client:
         # NB: Marketo may return that an export is Completed, but the file doesn't exist, so we need to check both.
         existing_exports = self.get_existing_exports(stream_type)
         export_id_exists = export_id in existing_exports
-        return export_id_exists and self.export_file_exists(stream_type, export_id, existing_exports)
+        return export_id_exists and self.export_file_exists(
+            stream_type, export_id, existing_exports
+        )
 
     def get_export_status(self, stream_type, export_id):
         endpoint = self.get_bulk_endpoint(stream_type, "status", export_id)
@@ -323,7 +357,9 @@ class Client:
 
             time.sleep(self.poll_interval)
 
-        raise ExportFailed("Export timed out after {} minutes".format(self.job_timeout / 60))
+        raise ExportFailed(
+            "Export timed out after {} minutes".format(self.job_timeout / 60)
+        )
 
     @handle_short_term_rate_limit()
     def test_corona(self):
@@ -347,7 +383,9 @@ class Client:
             },
         }
         endpoint = self.get_bulk_endpoint("leads", "create")
-        data = self._request("POST", endpoint, endpoint_name="leads_create", json=payload).json()
+        data = self._request(
+            "POST", endpoint, endpoint_name="leads_create", json=payload
+        ).json()
 
         raise_for_rate_limit(data)
 

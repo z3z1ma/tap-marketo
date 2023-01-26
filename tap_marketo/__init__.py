@@ -5,17 +5,16 @@
 import pendulum
 import singer
 from singer import bookmarks
-
-from tap_marketo.client import Client
-from tap_marketo.discover import discover
-from tap_marketo.sync import sync, determine_replication_key
 from singer.bookmarks import (
     get_bookmark,
-    write_bookmark,
     get_currently_syncing,
     set_currently_syncing,
+    write_bookmark,
 )
 from singer.catalog import Catalog
+from tap_marketo.client import Client
+from tap_marketo.discover import discover
+from tap_marketo.sync import determine_replication_key, sync
 
 REQUIRED_CONFIG_KEYS = [
     "start_date",

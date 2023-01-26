@@ -2,7 +2,6 @@ import unittest
 
 import pendulum
 import requests_mock
-
 from tap_marketo.client import Client
 from tap_marketo.discover import *
 
@@ -33,64 +32,50 @@ class TestDiscover(unittest.TestCase):
             "tap_stream_id": "activities_visit_webpage",
             "stream": "activities_visit_webpage",
             "key_properties": ["marketoGUID"],
-            "metadata" : [
-                {'breadcrumb': (),
-                 'metadata': {'table-key-properties': ['marketoGUID'],
-                              'marketo.activity-id': 1,
-                              'marketo.primary-attribute-name': 'webpage_id'}},
+            "metadata": [
                 {
-                    "metadata" : {
-                        "inclusion": "automatic"
+                    "breadcrumb": (),
+                    "metadata": {
+                        "table-key-properties": ["marketoGUID"],
+                        "marketo.activity-id": 1,
+                        "marketo.primary-attribute-name": "webpage_id",
                     },
-                    "breadcrumb" : ("properties", 'marketoGUID')
                 },
                 {
-                    "metadata" : {
-                        "inclusion": "automatic"
-                    },
-                    "breadcrumb" : ("properties", 'leadId')
+                    "metadata": {"inclusion": "automatic"},
+                    "breadcrumb": ("properties", "marketoGUID"),
                 },
                 {
-                    "metadata" : {
-                        "inclusion": "automatic"
-                    },
-                    "breadcrumb" : ("properties", 'activityDate')
+                    "metadata": {"inclusion": "automatic"},
+                    "breadcrumb": ("properties", "leadId"),
                 },
                 {
-                    "metadata" : {
-                        "inclusion": "automatic"
-                    },
-                    "breadcrumb" : ("properties", 'activityTypeId')
+                    "metadata": {"inclusion": "automatic"},
+                    "breadcrumb": ("properties", "activityDate"),
                 },
                 {
-                    "metadata" : {
-                        "inclusion": "automatic"
-                    },
-                    "breadcrumb" : ("properties", 'primary_attribute_name')
+                    "metadata": {"inclusion": "automatic"},
+                    "breadcrumb": ("properties", "activityTypeId"),
                 },
                 {
-                    "metadata" : {
-                        "inclusion": "automatic"
-                    },
-                    "breadcrumb" : ("properties", 'primary_attribute_value_id')
+                    "metadata": {"inclusion": "automatic"},
+                    "breadcrumb": ("properties", "primary_attribute_name"),
                 },
                 {
-                    "metadata" : {
-                        "inclusion": "automatic"
-                    },
-                    "breadcrumb" : ("properties", 'primary_attribute_value')
+                    "metadata": {"inclusion": "automatic"},
+                    "breadcrumb": ("properties", "primary_attribute_value_id"),
                 },
                 {
-                    "metadata" : {
-                        "inclusion": "available"
-                    },
-                    "breadcrumb" : ("properties", 'client_ip_address')
+                    "metadata": {"inclusion": "automatic"},
+                    "breadcrumb": ("properties", "primary_attribute_value"),
                 },
                 {
-                    "metadata" : {
-                        "inclusion": "available"
-                    },
-                    "breadcrumb" : ("properties", 'query_parameters')
+                    "metadata": {"inclusion": "available"},
+                    "breadcrumb": ("properties", "client_ip_address"),
+                },
+                {
+                    "metadata": {"inclusion": "available"},
+                    "breadcrumb": ("properties", "query_parameters"),
                 },
             ],
             "schema": {
@@ -130,16 +115,18 @@ class TestDiscover(unittest.TestCase):
         }
         result = get_activity_type_stream(activity)
         result_metadata = result.pop("metadata")
-        stream_metadata = stream.pop('metadata')
+        stream_metadata = stream.pop("metadata")
         automatic_count = 0
         for mdata in result_metadata:
-            if mdata['metadata'].get('inclusion') == 'automatic':
+            if mdata["metadata"].get("inclusion") == "automatic":
                 automatic_count += 1
         self.assertDictEqual(stream, result)
-        self.assertEqual(sorted(result_metadata, key=lambda x: x['breadcrumb']),
-                         sorted(stream_metadata, key=lambda x: x['breadcrumb']))
+        self.assertEqual(
+            sorted(result_metadata, key=lambda x: x["breadcrumb"]),
+            sorted(stream_metadata, key=lambda x: x["breadcrumb"]),
+        )
         self.assertEqual(10, len(result_metadata))
-        self.assertEqual(7,automatic_count)
+        self.assertEqual(7, automatic_count)
 
     def test_discover_leads(self):
         client = Client("123-ABC-456", "id", "secret")
@@ -173,14 +160,16 @@ class TestDiscover(unittest.TestCase):
         }
 
         with requests_mock.Mocker(real_http=True) as mock:
-            mock.register_uri("GET", client.get_url("rest/v1/leads/describe.json"), json=data)
+            mock.register_uri(
+                "GET", client.get_url("rest/v1/leads/describe.json"), json=data
+            )
             self.maxDiff = None
             result = discover_leads(client)
             metadata = result.pop("metadata")
             automatic_count = 0
             for mdata in metadata:
-                if mdata.get('metadata', {}).get('inclusion') == 'automatic':
+                if mdata.get("metadata", {}).get("inclusion") == "automatic":
                     automatic_count += 1
             self.assertDictEqual(stream, result)
-            self.assertEqual(3,len(metadata))
-            self.assertEqual(1,automatic_count)
+            self.assertEqual(3, len(metadata))
+            self.assertEqual(1, automatic_count)
