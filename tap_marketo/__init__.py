@@ -15,15 +15,14 @@ from singer.bookmarks import (
     get_currently_syncing,
     set_currently_syncing,
 )
+from singer.catalog import Catalog
 
 REQUIRED_CONFIG_KEYS = [
     "start_date",
-
     # Log in to Marketo
     # Go to Admin, select Integration->Web Services
     # Endpoint url matches https://123-ABC-456.mktorest.com/rest
     "endpoint",
-
     # Log in to Marketo
     # Go to Admin, select Integration->Launch Point
     # Client ID and Secret can be found by clicking "View Details"
@@ -33,32 +32,32 @@ REQUIRED_CONFIG_KEYS = [
 
 
 def validate_state(config, catalog, state):
+    if isinstance(catalog, Catalog):
+        catalog = catalog.to_dict()
     for stream in catalog["streams"]:
-        for mdata in stream['metadata']:
-            if mdata['breadcrumb'] == [] and mdata['metadata'].get('selected') != True:
+        for mdata in stream["metadata"]:
+            if mdata["breadcrumb"] == [] and mdata["metadata"].get("selected") != True:
                 # If a stream is deselected while it's the current stream, unset the
                 # current stream.
                 if stream["tap_stream_id"] == get_currently_syncing(state):
                     set_currently_syncing(state, None)
                 break
 
-        replication_key = determine_replication_key(stream['tap_stream_id'])
+        replication_key = determine_replication_key(stream["tap_stream_id"])
         if not replication_key:
             continue
 
         # If there's no bookmark for a stream (new integration, newly selected,
         # reset, etc) we need to use the default start date from the config.
-        bookmark = get_bookmark(state,
-                                stream["tap_stream_id"],
-                                replication_key)
+        bookmark = get_bookmark(state, stream["tap_stream_id"], replication_key)
         if bookmark is None:
-            state = write_bookmark(state,
-                                   stream["tap_stream_id"],
-                                   replication_key,
-                                   config["start_date"])
+            state = write_bookmark(
+                state, stream["tap_stream_id"], replication_key, config["start_date"]
+            )
 
     singer.write_state(state)
     return state
+
 
 def _main(config, properties, state, discover_mode=False):
     client = Client(**config)
