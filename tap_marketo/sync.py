@@ -70,9 +70,7 @@ def format_value(value, schema):
         # Custom Marketo percent type fields can have decimals, so we drop them
         decimal_index = value.find(".")
         if decimal_index > 0:
-            singer.log_warning(
-                "Dropping decimal from integer type. Original Value: %s", value
-            )
+            singer.log_warning("Dropping decimal from integer type. Original Value: %s", value)
             value = value[:decimal_index]
         return int(value)
     elif "string" in field_type:
@@ -93,8 +91,7 @@ def format_values(stream, row):
     available_fields = []
     for entry in stream["metadata"]:
         if len(entry["breadcrumb"]) > 0 and (
-            entry["metadata"].get("selected")
-            or entry["metadata"].get("inclusion") == "automatic"
+            entry["metadata"].get("selected") or entry["metadata"].get("inclusion") == "automatic"
         ):
             available_fields.append(entry["breadcrumb"][-1])
 
@@ -104,15 +101,9 @@ def format_values(stream, row):
     return rtn
 
 
-def update_state_with_export_info(
-    state, stream, bookmark=None, export_id=None, export_end=None
-):
-    state = bookmarks.write_bookmark(
-        state, stream["tap_stream_id"], "export_id", export_id
-    )
-    state = bookmarks.write_bookmark(
-        state, stream["tap_stream_id"], "export_end", export_end
-    )
+def update_state_with_export_info(state, stream, bookmark=None, export_id=None, export_end=None):
+    state = bookmarks.write_bookmark(state, stream["tap_stream_id"], "export_id", export_id)
+    state = bookmarks.write_bookmark(state, stream["tap_stream_id"], "export_end", export_end)
     if bookmark:
         state = bookmarks.write_bookmark(
             state,
@@ -148,15 +139,14 @@ MEGABYTE_IN_BYTES = 1024 * 1024
 CHUNK_SIZE_MB = 10
 CHUNK_SIZE_BYTES = MEGABYTE_IN_BYTES * CHUNK_SIZE_MB
 
+
 # This function has an issue with UTF-8 data most likely caused by decode_unicode=True
 # See https://github.com/singer-io/tap-marketo/pull/51/files
 def stream_rows(client, stream_type, export_id):
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf8") as csv_file:
         singer.log_info("Download starting.")
         resp = client.stream_export(stream_type, export_id)
-        for chunk in resp.iter_content(
-            chunk_size=CHUNK_SIZE_BYTES, decode_unicode=True
-        ):
+        for chunk in resp.iter_content(chunk_size=CHUNK_SIZE_BYTES, decode_unicode=True):
             if chunk:
                 # Replace CR
                 chunk = chunk.replace("\r", "")
@@ -208,9 +198,7 @@ def get_or_create_export_for_leads(client, state, stream, export_start, config):
             state, stream, export_id=export_id, export_end=export_end.isoformat()
         )
     else:
-        export_end = pendulum.parse(
-            bookmarks.get_bookmark(state, "leads", "export_end")
-        )
+        export_end = pendulum.parse(bookmarks.get_bookmark(state, "leads", "export_end"))
 
     return export_id, export_end
 
@@ -303,12 +291,8 @@ def sync_leads(client, state, stream, config):
         stream["key_properties"],
         bookmark_properties=[replication_key],
     )
-    initial_bookmark = pendulum.parse(
-        bookmarks.get_bookmark(state, "leads", replication_key)
-    )
-    export_start = pendulum.parse(
-        bookmarks.get_bookmark(state, "leads", replication_key)
-    )
+    initial_bookmark = pendulum.parse(bookmarks.get_bookmark(state, "leads", replication_key))
+    export_start = pendulum.parse(bookmarks.get_bookmark(state, "leads", replication_key))
     if client.use_corona:
         export_start = export_start.subtract(days=ATTRIBUTION_WINDOW_DAYS)
 
@@ -338,9 +322,7 @@ def sync_leads(client, state, stream, config):
                 record_count += 1
 
         # Now that one of the exports is finished, update the bookmark
-        state = update_state_with_export_info(
-            state, stream, bookmark=max_bookmark.isoformat()
-        )
+        state = update_state_with_export_info(state, stream, bookmark=max_bookmark.isoformat())
         export_start = export_end
 
     return state, record_count
@@ -371,14 +353,10 @@ def sync_activities(client, state, stream, config):
             row = flatten_activity(row, stream)
             record = format_values(stream, row)
 
-            singer.write_record(
-                stream["tap_stream_id"], record, time_extracted=time_extracted
-            )
+            singer.write_record(stream["tap_stream_id"], record, time_extracted=time_extracted)
             record_count += 1
 
-        state = update_state_with_export_info(
-            state, stream, bookmark=export_start.isoformat()
-        )
+        state = update_state_with_export_info(state, stream, bookmark=export_start.isoformat())
         export_start = export_end
 
     return state, record_count
@@ -464,9 +442,7 @@ def sync_paginated(client, state, stream):
     # Paginated requests use paging tokens for retrieving the next page
     # of results. These tokens are stored in the state for resuming
     # syncs. If a paging token exists in state, use it.
-    next_page_token = bookmarks.get_bookmark(
-        state, stream["tap_stream_id"], "next_page_token"
-    )
+    next_page_token = bookmarks.get_bookmark(state, stream["tap_stream_id"], "next_page_token")
     if next_page_token:
         params["nextPageToken"] = next_page_token
 
@@ -474,9 +450,7 @@ def sync_paginated(client, state, stream):
     record_count = 0
     job_started = pendulum.utcnow().isoformat()
     while True:
-        data = client.request(
-            "GET", endpoint, endpoint_name=stream["tap_stream_id"], params=params
-        )
+        data = client.request("GET", endpoint, endpoint_name=stream["tap_stream_id"], params=params)
 
         time_extracted = utils.now()
 
@@ -488,9 +462,7 @@ def sync_paginated(client, state, stream):
             if record[replication_key] >= start_date:
                 record_count += 1
 
-                singer.write_record(
-                    stream["tap_stream_id"], record, time_extracted=time_extracted
-                )
+                singer.write_record(stream["tap_stream_id"], record, time_extracted=time_extracted)
 
         # No next page, results are exhausted.
         if "nextPageToken" not in data:
@@ -505,12 +477,8 @@ def sync_paginated(client, state, stream):
 
     # Once all results are exhausted, unset the next page token bookmark
     # so the subsequent sync starts from the beginning.
-    state = bookmarks.write_bookmark(
-        state, stream["tap_stream_id"], "next_page_token", None
-    )
-    state = bookmarks.write_bookmark(
-        state, stream["tap_stream_id"], replication_key, job_started
-    )
+    state = bookmarks.write_bookmark(state, stream["tap_stream_id"], "next_page_token", None)
+    state = bookmarks.write_bookmark(state, stream["tap_stream_id"], replication_key, job_started)
     singer.write_state(state)
     return state, record_count
 

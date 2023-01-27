@@ -8,7 +8,6 @@ from tap_marketo.sync import determine_replication_key
 
 class TestValidateState(unittest.TestCase):
     def test_validate_state(self):
-
         mock_catalog = {
             "streams": [
                 {
@@ -190,18 +189,14 @@ class TestValidateState(unittest.TestCase):
 
         mock_state_1 = {
             "currently_syncing": "activities_visit_webpage",
-            "bookmarks": {
-                "leads": {determine_replication_key("leads"): "2019-09-08T00:00:00Z"}
-            },
+            "bookmarks": {"leads": {determine_replication_key("leads"): "2019-09-08T00:00:00Z"}},
         }
 
         mock_state_2 = {
             "currently_syncing": "leads",
             "bookmarks": {
                 "activities_visit_webpage": {
-                    determine_replication_key("activities_visit_webpage"): mock_config[
-                        "start_date"
-                    ]
+                    determine_replication_key("activities_visit_webpage"): mock_config["start_date"]
                 },
                 "leads": {determine_replication_key("leads"): "2019-09-08T00:00:00Z"},
             },
@@ -211,9 +206,7 @@ class TestValidateState(unittest.TestCase):
             "currently_syncing": "activities_visit_webpage",
             "bookmarks": {
                 "activities_visit_webpage": {
-                    determine_replication_key("activities_visit_webpage"): mock_config[
-                        "start_date"
-                    ]
+                    determine_replication_key("activities_visit_webpage"): mock_config["start_date"]
                 },
                 "leads": {determine_replication_key("leads"): "2019-09-08T00:00:00Z"},
             },
@@ -223,9 +216,7 @@ class TestValidateState(unittest.TestCase):
             "currently_syncing": None,
             "bookmarks": {
                 "activities_visit_webpage": {
-                    determine_replication_key("activities_visit_webpage"): mock_config[
-                        "start_date"
-                    ]
+                    determine_replication_key("activities_visit_webpage"): mock_config["start_date"]
                 },
                 "leads": {determine_replication_key("leads"): "2019-09-08T00:00:00Z"},
             },

@@ -158,9 +158,7 @@ def discover_leads(client):
 
     for field in data["result"]:
         if "rest" not in field:
-            singer.log_debug(
-                "Field leads.%s not supported via the REST API.", field["displayName"]
-            )
+            singer.log_debug("Field leads.%s not supported via the REST API.", field["displayName"])
             continue
         field_name = field["rest"]["name"]
 
@@ -210,17 +208,11 @@ def discover_catalog(name, automatic_inclusion, **kwargs):
 
         for field in discovered_schema["schema"]["properties"]:
             if field in automatic_inclusion:
-                mdata = metadata.write(
-                    mdata, ("properties", field), "inclusion", "automatic"
-                )
+                mdata = metadata.write(mdata, ("properties", field), "inclusion", "automatic")
             elif field in unsupported:
-                mdata = metadata.write(
-                    mdata, ("properties", field), "inclusion", "unsupported"
-                )
+                mdata = metadata.write(mdata, ("properties", field), "inclusion", "unsupported")
             else:
-                mdata = metadata.write(
-                    mdata, ("properties", field), "inclusion", "available"
-                )
+                mdata = metadata.write(mdata, ("properties", field), "inclusion", "available")
 
         if stream_automatic_inclusion:
             mdata = metadata.write(mdata, (), "inclusion", "automatic")

@@ -28,9 +28,7 @@ mock_request_object = MockRequest()
 @mock.patch("requests.Request.prepare")
 @mock.patch("requests.get", side_effect=get_mock_http_response)
 class TestRequestTimeoutValue(unittest.TestCase):
-    def test_no_request_timeout_in_config(
-        self, mocked_get, mocked_prepare, mocked_send
-    ):
+    def test_no_request_timeout_in_config(self, mocked_get, mocked_prepare, mocked_send):
         """
         Verify that if request_timeout is not provided in config then default value is used
         """
@@ -65,9 +63,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
             timeout=300.0,
         )
 
-    def test_integer_request_timeout_in_config(
-        self, mocked_get, mocked_prepare, mocked_send
-    ):
+    def test_integer_request_timeout_in_config(self, mocked_get, mocked_prepare, mocked_send):
         """
         Verify that if request_timeout is provided in config(integer value) then it should be use
         """
@@ -103,9 +99,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
             timeout=100.0,
         )
 
-    def test_float_request_timeout_in_config(
-        self, mocked_get, mocked_prepare, mocked_send
-    ):
+    def test_float_request_timeout_in_config(self, mocked_get, mocked_prepare, mocked_send):
         """
         Verify that if request_timeout is provided in config(float value) then it should be use
         """
@@ -141,9 +135,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
             timeout=100.5,
         )
 
-    def test_string_request_timeout_in_config(
-        self, mocked_get, mocked_prepare, mocked_send
-    ):
+    def test_string_request_timeout_in_config(self, mocked_get, mocked_prepare, mocked_send):
         """
         Verify that if request_timeout is provided in config(string value) then it should be use
         """
@@ -179,9 +171,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
             timeout=100.0,
         )
 
-    def test_empty_string_request_timeout_in_config(
-        self, mocked_get, mocked_prepare, mocked_send
-    ):
+    def test_empty_string_request_timeout_in_config(self, mocked_get, mocked_prepare, mocked_send):
         """
         Verify that if request_timeout is provided in config with empty string then default value is used
         """
@@ -217,9 +207,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
             timeout=300.0,
         )
 
-    def test_zero_request_timeout_in_config(
-        self, mocked_get, mocked_prepare, mocked_send
-    ):
+    def test_zero_request_timeout_in_config(self, mocked_get, mocked_prepare, mocked_send):
         """
         Verify that if request_timeout is provided in config with zero value then default value is used
         """
@@ -255,9 +243,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
             timeout=300.0,
         )
 
-    def test_zero_string_request_timeout_in_config(
-        self, mocked_get, mocked_prepare, mocked_send
-    ):
+    def test_zero_string_request_timeout_in_config(self, mocked_get, mocked_prepare, mocked_send):
         """
         Verify that if request_timeout is provided in config with zero in string format then default value is used
         """
@@ -297,9 +283,7 @@ class TestRequestTimeoutValue(unittest.TestCase):
 @mock.patch("time.sleep")
 class TestRequestTimeoutBackoff(unittest.TestCase):
     @mock.patch("requests.get", side_effect=requests.exceptions.Timeout)
-    def test_request_timeout_backoff_in_refresh_token(
-        self, mocked_request, mocked_sleep
-    ):
+    def test_request_timeout_backoff_in_refresh_token(self, mocked_request, mocked_sleep):
         """
         Verify refresh_token function is backoff for 5 times on Timeout exceeption
         """
@@ -320,9 +304,7 @@ class TestRequestTimeoutBackoff(unittest.TestCase):
         self.assertEqual(mocked_request.call_count, 5)
 
     @mock.patch("requests.Session.send", side_effect=requests.exceptions.Timeout)
-    def test_request_timeout_backoff_in__request_function(
-        self, mocked_send, mocked_sleep
-    ):
+    def test_request_timeout_backoff_in__request_function(self, mocked_send, mocked_sleep):
         """
         Verify _request function is backoff for 5 times on Timeout exceeption
         """

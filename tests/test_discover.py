@@ -160,9 +160,7 @@ class TestDiscover(unittest.TestCase):
         }
 
         with requests_mock.Mocker(real_http=True) as mock:
-            mock.register_uri(
-                "GET", client.get_url("rest/v1/leads/describe.json"), json=data
-            )
+            mock.register_uri("GET", client.get_url("rest/v1/leads/describe.json"), json=data)
             self.maxDiff = None
             result = discover_leads(client)
             metadata = result.pop("metadata")

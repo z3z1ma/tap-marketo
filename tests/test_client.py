@@ -16,9 +16,7 @@ class TestClient(unittest.TestCase):
         self.client = Client("123-ABC-789", "id", "secret")
 
     def test_extract_domain(self):
-        self.assertEqual(
-            "123-ABC-789", extract_domain("https://123-ABC-789.mktorest.com/rest")
-        )
+        self.assertEqual("123-ABC-789", extract_domain("https://123-ABC-789.mktorest.com/rest"))
         with self.assertRaises(ValueError):
             extract_domain("notadomain")
 
@@ -38,9 +36,7 @@ class TestClient(unittest.TestCase):
 
     def test_refresh_token_error_not_2xx(self):
         with requests_mock.Mocker(real_http=True) as mock:
-            mock.register_uri(
-                "GET", self.client.get_url("identity/oauth/token"), status_code=404
-            )
+            mock.register_uri("GET", self.client.get_url("identity/oauth/token"), status_code=404)
             with self.assertRaises(ApiException):
                 self.client.refresh_token()
 
@@ -61,9 +57,7 @@ class TestClient(unittest.TestCase):
         self.client.calls_today = 1
         with requests_mock.Mocker(real_http=True) as mock:
             # the endpoitn we're going to call to make sure refresh_token gets called
-            mock.register_uri(
-                "GET", self.client.get_url("what"), json={"success": True}
-            )
+            mock.register_uri("GET", self.client.get_url("what"), json={"success": True})
             # mock out the refresh_token endpoint
             mock.register_uri(
                 "GET",
@@ -94,9 +88,7 @@ class TestClient(unittest.TestCase):
         self.assertEqual(0, self.client.calls_today)
         with requests_mock.Mocker(real_http=True) as mock:
             # the endpoitn we're going to call to make sure call count was updated
-            mock.register_uri(
-                "GET", self.client.get_url("what"), json={"success": True}
-            )
+            mock.register_uri("GET", self.client.get_url("what"), json={"success": True})
             # mock out the call count endpoint
             mock.register_uri(
                 "GET",
@@ -129,9 +121,7 @@ class TestClient(unittest.TestCase):
                 self.client.get_url(create),
                 json={"success": True, "result": [{"exportId": "123"}]},
             )
-            mock.register_uri(
-                "POST", self.client.get_url(cancel), json={"success": True}
-            )
+            mock.register_uri("POST", self.client.get_url(cancel), json={"success": True})
             self.assertTrue(self.client.use_corona)
 
     def test_test_corona_unsupported(self):
@@ -157,9 +147,7 @@ class TestExports(unittest.TestCase):
     def test_export_enqueued(self):
         export_id = "123"
         self.client.poll_interval = 0
-        self.client.poll_export = unittest.mock.MagicMock(
-            side_effect=["Created", "Completed"]
-        )
+        self.client.poll_export = unittest.mock.MagicMock(side_effect=["Created", "Completed"])
         self.client.enqueue_export = unittest.mock.MagicMock()
 
         self.assertTrue(self.client.wait_for_export("test", export_id))
@@ -168,9 +156,7 @@ class TestExports(unittest.TestCase):
     def test_api_exception(self):
         export_id = "123"
         self.client.poll_interval = 0
-        self.client.poll_export = unittest.mock.MagicMock(
-            side_effect=ApiException("Oh no!")
-        )
+        self.client.poll_export = unittest.mock.MagicMock(side_effect=ApiException("Oh no!"))
 
         with self.assertRaises(ApiException):
             self.client.wait_for_export("test", export_id)
@@ -179,9 +165,7 @@ class TestExports(unittest.TestCase):
         export_id = "123"
         self.client.poll_interval = 0
         self.client.job_timeout = 0
-        self.client.poll_export = unittest.mock.MagicMock(
-            side_effect=itertools.repeat("Queued")
-        )
+        self.client.poll_export = unittest.mock.MagicMock(side_effect=itertools.repeat("Queued"))
 
         with self.assertRaises(ExportFailed):
             self.client.wait_for_export("test", export_id)

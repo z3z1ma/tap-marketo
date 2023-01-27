@@ -15,12 +15,19 @@ POLL_INTERVAL = 60 * 5
 NO_CORONA_CODE = "1035"
 API_QUOTA_EXCEEDED = "1029"
 
-API_QUOTA_EXCEEDED_MESSAGE = "Marketo API returned error(s): {}. Data can resume replicating at midnight central time. Read more about Marketo Bulk API limits here: http://developers.marketo.com/rest-api/bulk-extract/#limits"
+API_QUOTA_EXCEEDED_MESSAGE = (
+    "Marketo API returned error(s): {}. Data can resume replicating at midnight central time. Read"
+    " more about Marketo Bulk API limits here:"
+    " http://developers.marketo.com/rest-api/bulk-extract/#limits"
+)
 
 # Marketo has a 100 requests per 20 seconds quota, this raises a 606 code if hit
 SHORT_TERM_QUOTA_EXCEEDED = "606"
 
-SHORT_TERM_QUOTA_EXCEEDED_MESSAGE = "Marketo API returned error(s): {}. This is due to a short term rate limiting mechanism. Backing off and retrying the request."
+SHORT_TERM_QUOTA_EXCEEDED_MESSAGE = (
+    "Marketo API returned error(s): {}. This is due to a short term rate limiting mechanism."
+    " Backing off and retrying the request."
+)
 
 # Marketo limits REST requests to 50000 per day with a rate limit of 100
 # calls per 20 seconds.
@@ -96,9 +103,8 @@ class Client:
         job_timeout=JOB_TIMEOUT,
         poll_interval=POLL_INTERVAL,
         request_timeout=REQUEST_TIMEOUT,
-        **kwargs
+        **kwargs,
     ):
-
         self.domain = extract_domain(endpoint)
         self.client_id = client_id
         self.client_secret = client_secret
@@ -149,9 +155,7 @@ class Client:
 
     # backoff for Timeout error is already included in "requests.exceptions.RequestException"
     # as it is a parent class of "Timeout" error
-    @singer.utils.backoff(
-        (requests.exceptions.RequestException), singer.utils.exception_is_4xx
-    )
+    @singer.utils.backoff((requests.exceptions.RequestException), singer.utils.exception_is_4xx)
     def refresh_token(self):
         # http://developers.marketo.com/rest-api/authentication/#creating_an_access_token
         params = {
@@ -166,9 +170,7 @@ class Client:
             resp = requests.get(url, params=params, timeout=self.request_timeout)
             resp_time = pendulum.utcnow()
         except requests.exceptions.ConnectionError as e:
-            raise ApiException(
-                "Connection error while refreshing token at {}.".format(url)
-            ) from e
+            raise ApiException("Connection error while refreshing token at {}.".format(url)) from e
 
         if resp.status_code != 200:
             raise ApiException(
@@ -192,9 +194,7 @@ class Client:
     # backoff for Timeout error is already included in "requests.exceptions.RequestException"
     # as it is the parent class of "Timeout" error
     @singer.utils.ratelimit(RATE_LIMIT_CALLS, RATE_LIMIT_SECONDS)
-    @singer.utils.backoff(
-        (requests.exceptions.RequestException), singer.utils.exception_is_4xx
-    )
+    @singer.utils.backoff((requests.exceptions.RequestException), singer.utils.exception_is_4xx)
     def _request(self, method, url, endpoint_name=None, stream=False, **kwargs):
         endpoint_name = endpoint_name or url
         url = self.get_url(url)
@@ -217,9 +217,7 @@ class Client:
             raise ApiException(data)
 
         self.calls_today = int(data["result"][0]["total"])
-        singer.log_info(
-            "Used %s of %s requests", self.calls_today, self.max_daily_calls
-        )
+        singer.log_info("Used %s of %s requests", self.calls_today, self.max_daily_calls)
 
     @handle_short_term_rate_limit()
     def request(self, method, url, endpoint_name=None, **kwargs):
@@ -228,9 +226,7 @@ class Client:
 
         self.calls_today += 1
         if self.calls_today > self.max_daily_calls:
-            raise ApiException(
-                "Exceeded daily quota of {} calls".format(self.max_daily_calls)
-            )
+            raise ApiException("Exceeded daily quota of {} calls".format(self.max_daily_calls))
 
         resp = self._request(method, url, endpoint_name, **kwargs)
         if "stream" not in kwargs:
@@ -248,9 +244,7 @@ class Client:
             # NB: 206 Partial Content returned when checking for file existence
             if resp.status_code not in [200, 206]:
                 raise ApiException(
-                    "Marketo API returned error: {0.status_code}: {0.content}".format(
-                        resp
-                    )
+                    "Marketo API returned error: {0.status_code}: {0.content}".format(resp)
                 )
 
             return resp
@@ -357,9 +351,7 @@ class Client:
 
             time.sleep(self.poll_interval)
 
-        raise ExportFailed(
-            "Export timed out after {} minutes".format(self.job_timeout / 60)
-        )
+        raise ExportFailed("Export timed out after {} minutes".format(self.job_timeout / 60))
 
     @handle_short_term_rate_limit()
     def test_corona(self):
@@ -383,9 +375,7 @@ class Client:
             },
         }
         endpoint = self.get_bulk_endpoint("leads", "create")
-        data = self._request(
-            "POST", endpoint, endpoint_name="leads_create", json=payload
-        ).json()
+        data = self._request("POST", endpoint, endpoint_name="leads_create", json=payload).json()
 
         raise_for_rate_limit(data)
 
